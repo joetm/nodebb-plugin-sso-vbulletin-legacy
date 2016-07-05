@@ -6,7 +6,7 @@
         meta = module.parent.require('./meta'),
         db = module.parent.require('../src/database'),
         passport = module.parent.require('passport'),
-        passportVB = require('passport-local').Strategy,
+        LocalStrategy = require('passport-local').Strategy,
         nconf = module.parent.require('nconf'),
         async = module.parent.require('async'),
         winston = module.parent.require('winston');
@@ -56,14 +56,21 @@
             // && VB.settings.hasOwnProperty('app_id') && VB.settings.app_id
             // && VB.settings.hasOwnProperty('secret') && VB.settings.secret
         ) {
-            passport.use(new passportVB({
-                // TODO
-                clientID: VB.settings.app_id,
-                clientSecret: VB.settings.secret,
-                callbackURL: nconf.get('url') + '/auth/vbulletin/callback',
-                passReqToCallback: true,
-                profileFields: ['id', 'emails', 'name', 'displayName']
-            }, function(req, accessToken, refreshToken, profile, done) {
+            passport.use(new LocalStrategy(
+              function(username, password, done) {
+
+
+
+// TODO
+                User.findOne({username: username}, function (err, user) {
+                  if (err) { return done(err); }
+                  if (!user) { return done(null, false); }
+                  if (!user.verifyPassword(password)) { return done(null, false); }
+
+
+
+// TODO
+/*
                 if (req.hasOwnProperty('user') && req.user.hasOwnProperty('uid') && req.user.uid > 0) {
                     // Save vbulletin-specific information to the user
                     user.setUserField(req.user.uid, 'vbid', profile.id);
@@ -93,7 +100,14 @@
                     authenticationController.onSuccessfulLogin(req, user.uid);
                     done(null, user);
                 });
-            }));
+*/
+
+
+                  return done(null, user);
+                });
+
+              }
+            ));
 
             strategies.push({
                 name: 'vbulletin',
@@ -164,7 +178,7 @@
 
     VB.login = function(vbid, name, email, picture, accessToken, refreshToken, profile, callback) {
 
-        winston.verbose("Facebook.login vbid, name, email, picture: " + vbid + ", " + ", " + name + ", " + email + ", " + picture);
+        winston.verbose("VB.login vbid, name, email, picture: " + vbid + ", " + ", " + name + ", " + email + ", " + picture);
 
         VB.getUidByVbid(vbid, function(err, uid) {
             if(err) {
