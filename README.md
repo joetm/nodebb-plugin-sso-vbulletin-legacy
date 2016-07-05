@@ -1,7 +1,9 @@
-# NodeBB Facebook SSO
+# NodeBB VBulletin Login
 
-NodeBB Plugin that allows users to login/register via their Facebook account.
+NodeBB Plugin that allows users to login/register via their VBulletin account.
+
+- work in progress -
 
 ## Installation
 
-    npm install nodebb-plugin-sso-facebook
+n/a
