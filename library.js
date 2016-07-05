@@ -9,7 +9,8 @@
         LocalStrategy = require('passport-local').Strategy,
         nconf = module.parent.require('nconf'),
         async = module.parent.require('async'),
-        winston = module.parent.require('winston');
+        winston = module.parent.require('winston'),
+        md5 = module.parent.require('md5');
 
     var authenticationController = module.parent.require('./controllers/authentication');
 
@@ -56,21 +57,25 @@
             // && VB.settings.hasOwnProperty('app_id') && VB.settings.app_id
             // && VB.settings.hasOwnProperty('secret') && VB.settings.secret
         ) {
-            passport.use(new LocalStrategy(
-              function(username, password, done) {
+            passport.use(new LocalStrategy({
+                usernameField: 'username',
+                passwordField: 'password',
+                passReqToCallback: true,
+                session: false
+            },
+              function(req, username, password, done) {
 
-
-
-// TODO
+                // TODO
                 User.findOne({username: username}, function (err, user) {
                   if (err) { return done(err); }
                   if (!user) { return done(null, false); }
-                  if (!user.verifyPassword(password)) { return done(null, false); }
 
+                  if (md5(md5(password) + user.salt) !== user.password) {
+                      return done(null, false);
+                  }
+                });
 
-
-// TODO
-/*
+                // TODO
                 if (req.hasOwnProperty('user') && req.user.hasOwnProperty('uid') && req.user.uid > 0) {
                     // Save vbulletin-specific information to the user
                     user.setUserField(req.user.uid, 'vbid', profile.id);
@@ -85,6 +90,7 @@
                     email = (profile.username ? profile.username : profile.id) + '@facebook.com';
                 }
 
+/*
                 VB.login(profile.id, profile.displayName, email, 'https://graph.facebook.com/' + profile.id + '/picture?type=large', accessToken, refreshToken, profile, function(err, user) {
                     if (err) {
                         return done(err);
@@ -101,11 +107,6 @@
                     done(null, user);
                 });
 */
-
-
-                  return done(null, user);
-                });
-
               }
             ));
 

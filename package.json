@@ -26,7 +26,8 @@
   "readme": "",
   "readmeFilename": "README.md",
   "dependencies": {
-    "passport-local": "any"
+    "passport-local": "1.0.0",
+    "md5": "1.3.0"
   },
   "nbbpm": {
     "compatibility": "^1.1.x"
