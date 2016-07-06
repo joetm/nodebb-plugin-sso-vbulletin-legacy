@@ -9,7 +9,7 @@
         LocalStrategy = require('passport-local').Strategy,
         nconf = module.parent.require('nconf'),
         async = module.parent.require('async'),
-        winston = module.parent.require('winston'),
+        log = module.parent.require('winston'),
         md5 = module.parent.require('md5');
 
     var authenticationController = module.parent.require('./controllers/authentication');
@@ -26,6 +26,7 @@
         settings: undefined
     };
 
+    // "hook": "static:app.load"
     VB.init = function(params, callback) {
         function render(req, res) {
             res.render('admin/plugins/sso-vbulletin', {});
@@ -34,7 +35,6 @@
         params.router.get('/api/admin/plugins/sso-vbulletin', render);
         callback();
     };
-
     VB.getSettings = function(callback) {
         if (VB.settings) {
             return callback();
@@ -45,6 +45,7 @@
         });
     }
 
+    // "hook": "filter:auth.init"
     VB.getStrategy = function(strategies, callback) {
         if (!VB.settings) {
             return VB.getSettings(function() {
@@ -54,8 +55,7 @@
 
         if (
             VB.settings !== undefined
-            // && VB.settings.hasOwnProperty('app_id') && VB.settings.app_id
-            // && VB.settings.hasOwnProperty('secret') && VB.settings.secret
+            // && VB.settings.hasOwnProperty('db_table') && VB.settings.db_table
         ) {
             passport.use(new LocalStrategy({
                 usernameField: 'username',
@@ -90,8 +90,10 @@
                     email = (profile.username ? profile.username : profile.id) + '@facebook.com';
                 }
 
-/*
-                VB.login(profile.id, profile.displayName, email, 'https://graph.facebook.com/' + profile.id + '/picture?type=large', accessToken, refreshToken, profile, function(err, user) {
+                var avatar = 'https://graph.facebook.com/' + profile.id + '/picture?type=large';
+                var profilepic = 'https://graph.facebook.com/' + profile.id + '/picture?type=large';
+
+                VB.login(profile.id, profile.displayName, email, avatar, profilepic, profile, function(err, user) {
                     if (err) {
                         return done(err);
                     }
@@ -106,7 +108,7 @@
                     authenticationController.onSuccessfulLogin(req, user.uid);
                     done(null, user);
                 });
-*/
+
               }
             ));
 
@@ -122,6 +124,7 @@
         callback(null, strategies);
     };
 
+    // "hook": "filter:auth.list"
     VB.getAssociation = function(data, callback) {
         user.getUserField(data.uid, 'vbid', function(err, vbId) {
             if (err) {
@@ -131,7 +134,7 @@
             if (vbId) {
                 data.associations.push({
                     associated: true,
-                    url: 'https://facebook.com/' + vbId,
+                    url: 'https://TODO.com/' + vbId,
                     name: constants.name,
                     icon: constants.admin.icon
                 });
@@ -148,38 +151,45 @@
         })
     };
 
+    // "hook": "filter:register.interstitial"
     VB.prepareInterstitial = function(data, callback) {
         if (data.userData.hasOwnProperty('uid') && data.userData.hasOwnProperty('vbid')) {
-            user.getUserField(data.userData.uid, 'email', function(err, email) {
-                if (email.endsWith('@facebook.com')) {
-                    data.interstitials.push({
-                        template: 'partials/sso-vbulletin/password.tpl',
-                        data: {},
-                        callback: VB.storeAdditionalData
-                    });
-                }
-
-                callback(null, data);
+            // show the interstitial to vb users
+            user.getUserField(data.userData.uid, 'username', function(err, username) {
+                data.interstitials.push({
+                    template: 'partials/sso-vbulletin/password.tpl',
+                    data: {username},
+                    callback: VB.storeAdditionalData
+                });
             });
+            callback(null, data);
         } else {
             callback(null, data);
         }
     };
 
     VB.storeAdditionalData = function(userData, data, callback) {
-        user.setUserField(userData.uid, 'email', data.email, callback);
+        // TODO: save the password of this user in NodeBB
+
+
+
+
+
+
+
+
+        // user.setUserField(userData.uid, 'password', data.password, callback);
     };
 
-    VB.storeTokens = function(uid, accessToken, refreshToken) {
-        //JG: Actually save the useful stuff
-        winston.info("Storing received fb access information for uid(" + uid + ") accessToken(" + accessToken + ") refreshToken(" + refreshToken + ")");
-        user.setUserField(uid, 'fbaccesstoken', accessToken);
-        user.setUserField(uid, 'fbrefreshtoken', refreshToken);
-    };
+    // VB.storeTokens = function(uid, accessToken, refreshToken) {
+    //     log.info("Storing received fb access information for uid(" + uid + ") accessToken(" + accessToken + ") refreshToken(" + refreshToken + ")");
+    //     user.setUserField(uid, 'fbaccesstoken', accessToken);
+    //     user.setUserField(uid, 'fbrefreshtoken', refreshToken);
+    // };
 
-    VB.login = function(vbid, name, email, picture, accessToken, refreshToken, profile, callback) {
+    VB.login = function(vbid, name, email, avatar, profilepic, profile, callback) {
 
-        winston.verbose("VB.login vbid, name, email, picture: " + vbid + ", " + ", " + name + ", " + email + ", " + picture);
+        log.verbose("VB.login vbid, name, email, avatar: " + vbid + ", " + ", " + name + ", " + email + ", " + avatar);
 
         VB.getUidByVbid(vbid, function(err, uid) {
             if(err) {
@@ -187,7 +197,7 @@
             }
             if (uid !== null) {
                 // Existing User
-                VB.storeTokens(uid, accessToken, refreshToken);
+                // VB.storeTokens(uid, accessToken, refreshToken);
                 callback(null, {
                     uid: uid
                 });
@@ -201,12 +211,12 @@
                     user.setUserField(uid, 'email:confirmed', autoConfirm);
 
                     // Save their photo, if present
-                    if (picture) {
-                        user.setUserField(uid, 'uploadedpicture', picture);
-                        user.setUserField(uid, 'picture', picture);
+                    if (avatar) {
+                        user.setUserField(uid, 'uploadedpicture', avatar);
+                        user.setUserField(uid, 'picture', avatar);
                     }
 
-                    VB.storeTokens(uid, accessToken, refreshToken);
+                    // VB.storeTokens(uid, accessToken, refreshToken);
 
                     callback(null, {
                         uid: uid
@@ -234,6 +244,7 @@
         });
     };
 
+    // OK
     VB.getUidByVbid = function(vbid, callback) {
         db.getObjectField('vbid:uid', vbid, function(err, uid) {
             if (err) {
@@ -243,6 +254,7 @@
         });
     };
 
+    // "hook": "filter:admin.header.build"
     VB.addMenuItem = function(custom_header, callback) {
         custom_header.authentication.push({
             'route': constants.admin.route,
@@ -253,6 +265,7 @@
         callback(null, custom_header);
     };
 
+	// "hook": "static:user.delete"
     VB.deleteUserData = function(data, callback) {
         var uid = data.uid;
 
@@ -263,7 +276,7 @@
             }
         ], function(err) {
             if (err) {
-                winston.error('[sso-vbulletin] Could not remove OAuthId data for uid ' + uid + '. Error: ' + err);
+                log.error('[sso-vbulletin] Could not remove OAuthId data for uid ' + uid + '. Error: ' + err);
                 return callback(err);
             }
             callback(null, uid);

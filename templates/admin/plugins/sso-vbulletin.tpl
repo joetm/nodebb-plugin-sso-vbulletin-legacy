@@ -8,8 +8,8 @@
 				</p>
 				<form role="form" class="sso-vbulletin-settings">
 					<div class="form-group">
-						<label for="app_id">XXX</label>
-						<input type="text" id="app_id" name="app_id" title="Application ID" class="form-control" placeholder="Application ID"><br />
+						<label for="db_table">Database table</label>
+						<input type="text" id="db_table" name="db_table" title="Database table" class="form-control" placeholder="Database table"><br />
 					</div>
 				</form>
 			</div>
